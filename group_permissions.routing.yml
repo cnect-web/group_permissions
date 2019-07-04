@@ -1,0 +1,12 @@
+group_permissions.override_group_permissions:
+  path: '/group/{group}/permissions'
+  defaults:
+    _form: '\Drupal\group_permissions\Form\GroupPermissionsForm'
+    _title: 'Group permissions'
+  requirements:
+    _group_permission: 'override group permissions'
+  options:
+    parameters:
+      group:
+        type: 'entity:group'
+
