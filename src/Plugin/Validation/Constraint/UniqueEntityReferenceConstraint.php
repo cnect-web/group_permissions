@@ -11,6 +11,8 @@ use Symfony\Component\Validator\Constraint;
  *   id = "UniqueReferenceField",
  *   label = @Translation("Unique reference field constraint", context = "Validation"),
  * )
+ *
+ * @see https://www.drupal.org/project/drupal/issues/2973455
  */
 class UniqueEntityReferenceConstraint extends Constraint {
 

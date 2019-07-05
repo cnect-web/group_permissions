@@ -164,7 +164,6 @@ class GroupPermissionsForm extends GroupPermissionsTypeSpecificForm {
 
         // Then list all of the permissions for that provider and section.
         foreach ($permissions as $perm => $perm_item) {
-//          var_dump($perm_item);
           // Create a row for the permission, starting with the description cell.
           $form['permissions'][$perm]['description'] = [
             '#type' => 'inline_template',
@@ -262,17 +261,24 @@ class GroupPermissionsForm extends GroupPermissionsTypeSpecificForm {
 
       if (!empty($this->groupPermission)) {
         $this->groupPermission->setPermissions($permissions);
-        $this->groupPermission->save();
       }
       else {
-        $group_permission = GroupPermission::create([
+        $this->groupPermission = GroupPermission::create([
           'gid' => $this->group->id(),
           'permissions' => $permissions,
         ]);
-        $group_permission->save();
       }
 
-      $this->messenger()->addMessage($this->t('The changes have been saved.'));
+      $violations = $this->groupPermission->validate();
+      if (count($violations) == 0) {
+        $this->groupPermission->save();
+        $this->messenger()->addMessage($this->t('The changes have been saved.'));
+      }
+      else {
+        foreach ($violations as $violation) {
+          $this->messenger()->addError($this->t($violation->getMessage()));
+        }
+      }
     }
     else {
       if (!empty($this->groupPermission)) {
@@ -282,6 +288,9 @@ class GroupPermissionsForm extends GroupPermissionsTypeSpecificForm {
 
   }
 
+  /**
+   * {@inheritdoc}
+   */
   protected function getPermissions() {
     $full_permissions = parent::getPermissions();
     // Only keep permissions for the current group.

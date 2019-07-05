@@ -20,12 +20,6 @@ class GroupPermissionAccessControlHandler extends EntityAccessControlHandler {
   protected function checkAccess(EntityInterface $entity, $operation, AccountInterface $account) {
     /** @var \Drupal\group_permissions\Entity\GroupPermissionInterface $entity */
     switch ($operation) {
-      case 'view':
-        if (!$entity->isPublished()) {
-          return AccessResult::allowedIfHasPermission($account, 'view unpublished group permission entities');
-        }
-        return AccessResult::allowedIfHasPermission($account, 'view published group permission entities');
-
       case 'update':
         return AccessResult::allowedIfHasPermission($account, 'edit group permission entities');
 

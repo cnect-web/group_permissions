@@ -31,6 +31,11 @@ use Drupal\Core\Field\BaseFieldDefinition;
 class GroupPermission extends ContentEntityBase implements GroupPermissionInterface {
 
   /**
+   * @see https://www.drupal.org/project/drupal/issues/2847319
+   */
+  protected $validationRequired = TRUE;
+
+  /**
    * {@inheritdoc}
    */
   public function getGroup() {
@@ -76,9 +81,8 @@ class GroupPermission extends ContentEntityBase implements GroupPermissionInterf
       ->setLabel(t('Permissions'))
       ->setRevisionable(FALSE)
       ->setTranslatable(FALSE)
-      ->setDescription(t('Group permissions.'));
-//      ->setRequired(TRUE)
-//      ->addConstraint('UniqueField');
+      ->setDescription(t('Group permissions.'))
+      ->setRequired(TRUE);
 
     return $fields;
   }

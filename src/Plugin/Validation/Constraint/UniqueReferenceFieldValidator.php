@@ -14,7 +14,6 @@ class UniqueReferenceFieldValidator extends ConstraintValidator {
    * {@inheritdoc}
    */
   public function validate($items, Constraint $constraint) {
-    exit('validate');
     if (!$item = $items->first()) {
       return;
     }
