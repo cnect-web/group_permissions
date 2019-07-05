@@ -45,31 +45,30 @@ class GroupPermissionCalculator extends GroupPermissionCalculatorBase {
     $groups = $this->entityTypeManager->getStorage('group')->loadMultiple();
 
     foreach ($groups as $group) {
-      $calculated_permissions->addCacheContexts(['group']);
-      $calculated_permissions->addCacheableDependency($group);
-
       $group_permission = GroupPermission::loadByGroup($group);
       if (!empty($group_permission)) {
+        $custom_permissions = $group_permission->getPermissions()->first()->getValue();
 
-        $group_role = $group->getGroupType()->getAnonymousRole();
-
-        $custom_permissions = [];
-        if (!empty($group_permission)) {
-          $custom_permissions = $group_permission->getPermissions()->first()->getValue();
+        $group_roles = [];
+        $member = $group->getMember($account);
+        if (!empty($member)) {
+          $group_roles = $member->getRoles();
         }
 
-        if (!empty($custom_permissions[$group_role->id()])) {
+        foreach ($group_roles as $group_role) {
+          if (!empty($custom_permissions[$group_role->id()])) {
+            $item = new CalculatedGroupPermissionsItem(
+              CalculatedGroupPermissionsItemInterface::SCOPE_GROUP,
+              $group->id(),
+              $custom_permissions[$group_role->id()]
+            );
 
-          $item = new CalculatedGroupPermissionsItem(
-            CalculatedGroupPermissionsItemInterface::SCOPE_GROUP,
-            $group->id(),
-            $custom_permissions[$group_role->id()]
-          );
-
-          $calculated_permissions->addItem($item);
-          $calculated_permissions->addCacheableDependency($group);
-          $calculated_permissions->addCacheableDependency($group_role);
+            $calculated_permissions->addItem($item);
+            $calculated_permissions->addCacheableDependency($group_role);
+          }
         }
+
+        $calculated_permissions->addCacheableDependency($group);
       }
 
     }
@@ -92,6 +91,7 @@ class GroupPermissionCalculator extends GroupPermissionCalculatorBase {
   }
 
   protected function calculateNotMemberPermissions(AccountInterface $account = NULL, $is_anonymous = TRUE) {
+
     $calculated_permissions = new RefinableCalculatedGroupPermissions();
     if (!$is_anonymous) {
       $calculated_permissions->addCacheContexts(['user']);
@@ -102,9 +102,6 @@ class GroupPermissionCalculator extends GroupPermissionCalculatorBase {
 
     $groups = $this->entityTypeManager->getStorage('group')->loadMultiple();
     foreach ($groups as $group) {
-      $calculated_permissions->addCacheContexts(['group']);
-      $calculated_permissions->addCacheableDependency($group);
-
       $group_permission = GroupPermission::loadByGroup($group);
       if (!empty($group_permission)) {
         if ($is_anonymous) {
@@ -113,6 +110,8 @@ class GroupPermissionCalculator extends GroupPermissionCalculatorBase {
         else {
           $group_role = $group->getGroupType()->getOutsiderRole();
         }
+
+        $calculated_permissions->addCacheableDependency($group_permission);
 
         $custom_permissions = $group_permission->getPermissions()
           ->first()
