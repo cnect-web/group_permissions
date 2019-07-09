@@ -85,8 +85,7 @@ class GroupPermissionsForm extends GroupPermissionsTypeSpecificForm {
     // Retrieve information for every role to user further down. We do this to
     // prevent the same methods from being fired (rows * permissions) times.
     foreach ($group_roles as $role_name => $group_role) {
-
-      if (!empty($custom_permissions[$role_name])) {
+      if (!empty($this->groupPermission)) {
         $permissions = $custom_permissions[$role_name];
       }
       else {
