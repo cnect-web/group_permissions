@@ -1,7 +1,7 @@
-group_permissions.link.group_navigation:
+group_permissions.link.group_permissions:
   route_name: 'group_permissions.override_group_permissions'
   title: 'Group permissions'
-  description: 'Group navigation'
+  description: 'Group permissions'
   base_route: 'entity.group.canonical'
   weight: 10
 

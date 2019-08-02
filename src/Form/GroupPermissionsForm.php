@@ -80,20 +80,30 @@ class GroupPermissionsForm extends GroupPermissionsTypeSpecificForm {
     // Sort the group roles using the static sort() method.
     // See \Drupal\Core\Config\Entity\ConfigEntityBase::sort().
     $group_roles = $this->getGroupRoles();
-    uasort($group_roles, '\Drupal\group\Entity\GroupRole::sort');
+
 
     // Retrieve information for every role to user further down. We do this to
     // prevent the same methods from being fired (rows * permissions) times.
     foreach ($group_roles as $role_name => $group_role) {
+      $permissions = [];
       if (!empty($this->groupPermission)) {
-        $permissions = $custom_permissions[$role_name];
+        // Permissions should be explicitly assigned another case we don't
+        // provide the permission.
+        if (!empty($custom_permissions[$role_name])) {
+          $permissions = $custom_permissions[$role_name];
+        }
       }
       else {
         $permissions = $group_role->getPermissions();
       }
 
+      $role_label = $group_role->label();
+      if ($group_role->isOutsider() && !$group_role->inPermissionsUI()) {
+        $role_label .= ' (Outsider)';
+      }
+
       $role_info[$role_name] = [
-        'label' => $group_role->label(),
+        'label' => $role_label,
         'permissions' => $permissions,
         'is_anonymous' => $group_role->isAnonymous(),
         'is_outsider' => $group_role->isOutsider(),
@@ -212,11 +222,10 @@ class GroupPermissionsForm extends GroupPermissionsTypeSpecificForm {
                 '#default_value' => in_array($perm, $info['permissions']) ? 1 : 0,
                 '#attributes' => [
                   'class' => [
-                    'rid-' . $role_name,
-                    'js-rid-' . $role_name
+                    "rid-$role_name",
+                    "js-rid-$role_name",
                   ]
                 ],
-                '#disabled' => empty($this->groupPermission),
                 '#parents' => [$role_name, $perm],
                 '#states' => [
                   'disabled' => [
@@ -284,7 +293,6 @@ class GroupPermissionsForm extends GroupPermissionsTypeSpecificForm {
         $this->groupPermission->delete();
       }
     }
-
   }
 
   /**
@@ -304,6 +312,16 @@ class GroupPermissionsForm extends GroupPermissionsTypeSpecificForm {
     }
 
     return $full_permissions;
+  }
+
+
+  protected function getGroupRoles() {
+    $roles = parent::getGroupRoles();
+    uasort($roles, '\Drupal\group\Entity\GroupRole::sort');
+
+    $storage = $this->entityTypeManager->getStorage('group_role');
+    $outsider_roles = $storage->loadSynchronizedByGroupTypes([$this->groupType->id()]);
+    return array_merge($roles, $outsider_roles);
   }
 
 }

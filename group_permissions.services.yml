@@ -1,6 +1,6 @@
 services:
   group_permission.group_permission_calculator:
     class: 'Drupal\group_permissions\Access\GroupPermissionCalculator'
-    arguments: ['@entity_type.manager', '@group.membership_loader']
+    arguments: ['@entity_type.manager', '@group.membership_loader', '@group_role.synchronizer']
     tags:
       - { name: group_permission_calculator, priority: -110 }
