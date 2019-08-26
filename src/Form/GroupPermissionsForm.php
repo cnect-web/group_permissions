@@ -4,6 +4,7 @@ namespace Drupal\group_permissions\Form;
 
 use Drupal\group\Entity\Group;
 use Drupal\Core\Extension\ModuleHandlerInterface;
+use Drupal\group\Entity\GroupTypeInterface;
 use Drupal\group\Form\GroupPermissionsTypeSpecificForm;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\group\Access\GroupPermissionHandlerInterface;
@@ -54,7 +55,7 @@ class GroupPermissionsForm extends GroupPermissionsTypeSpecificForm {
   /**
    * {@inheritdoc}
    */
-  public function buildForm(array $form, FormStateInterface $form_state, Group $group = NULL) {
+  public function buildForm(array $form, FormStateInterface $form_state, GroupTypeInterface $group = NULL) {
     $this->group = $group;
     $this->groupType = $group->getGroupType();
 
