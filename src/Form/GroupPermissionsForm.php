@@ -2,19 +2,19 @@
 
 namespace Drupal\group_permissions\Form;
 
-use Drupal\group\Entity\Group;
+use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Extension\ModuleHandlerInterface;
-use Drupal\group\Form\GroupPermissionsTypeSpecificForm;
-use Drupal\Core\Form\FormStateInterface;
 use Drupal\group\Access\GroupPermissionHandlerInterface;
+use Drupal\group\Entity\Group;
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\group\Form\GroupPermissionsForm as BasePermissionForm;
 use Drupal\group_permissions\Entity\GroupPermission;
-use Drupal\taxonomy\Entity\Term;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
  * Provides the group permissions administration form.
  */
-class GroupPermissionsForm extends GroupPermissionsTypeSpecificForm {
+class GroupPermissionsForm extends BasePermissionForm {
 
   const USE_DEFAULT = 1;
 
@@ -49,6 +49,39 @@ class GroupPermissionsForm extends GroupPermissionsTypeSpecificForm {
    */
   protected function getGroupType() {
     return $this->group->getGroupType();
+  }
+
+  /**
+   * The entity type manager.
+   *
+   * @var \Drupal\Core\Entity\EntityTypeManagerInterface
+   */
+  protected $entityTypeManager;
+
+  /**
+   * Constructs a new GroupPermissionsTypeSpecificForm.
+   *
+   * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
+   *   The entity type manager.
+   * @param \Drupal\group\Access\GroupPermissionHandlerInterface $permission_handler
+   *   The group permission handler.
+   * @param \Drupal\Core\Extension\ModuleHandlerInterface $module_handler
+   *   The module handler.
+   */
+  public function __construct(EntityTypeManagerInterface $entity_type_manager, GroupPermissionHandlerInterface $permission_handler, ModuleHandlerInterface $module_handler) {
+    parent::__construct($permission_handler, $module_handler);
+    $this->entityTypeManager = $entity_type_manager;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function create(ContainerInterface $container) {
+    return new static(
+      $container->get('entity_type.manager'),
+      $container->get('group.permissions'),
+      $container->get('module_handler')
+    );
   }
 
   /**
@@ -253,6 +286,25 @@ class GroupPermissionsForm extends GroupPermissionsTypeSpecificForm {
     $form['#attached']['library'][] = 'group/permissions';
 
     return $form;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  protected function getInfo() {
+    $list = [
+      'role_info' => [
+        '#prefix' => '<p>' . $this->t('Group types use three special roles:') . '</p>',
+        '#theme' => 'item_list',
+        '#items' => [
+          ['#markup' => $this->t('<strong>Anonymous:</strong> This is the same as the global Anonymous role, meaning the user has no account.')],
+          ['#markup' => $this->t('<strong>Outsider:</strong> This means the user has an account on the site, but is not a member of the group.')],
+          ['#markup' => $this->t('<strong>Member:</strong> The default role for anyone in the group. Behaves like the "Authenticated user" role does globally.')],
+        ],
+      ],
+    ];
+
+    return $list + parent::getInfo();
   }
 
   /**
