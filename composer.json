@@ -13,8 +13,7 @@
     "support": {
         "issues": "https://github.com/cnect-web/group_permissions/issues"
     },
-    "license": "GPL-2.0-or-later",
-    "minimum-stability": "dev",
+    "license": "GPL-2.0",
     "require": {
         "drupal/group": "~1.0"
     }
