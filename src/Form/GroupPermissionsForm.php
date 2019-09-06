@@ -367,8 +367,19 @@ class GroupPermissionsForm extends BasePermissionForm {
   }
 
 
+  /**
+   * {@inheritdoc}
+   */
   protected function getGroupRoles() {
-    $roles = parent::getGroupRoles();
+     $properties = [
+      'group_type' => $this->groupType->id(),
+      'permissions_ui' => TRUE,
+    ];
+
+    $roles = $this->entityTypeManager
+      ->getStorage('group_role')
+      ->loadByProperties($properties);
+
     uasort($roles, '\Drupal\group\Entity\GroupRole::sort');
 
     $storage = $this->entityTypeManager->getStorage('group_role');
