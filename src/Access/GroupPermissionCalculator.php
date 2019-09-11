@@ -69,6 +69,7 @@ class GroupPermissionCalculator extends GroupPermissionCalculatorBase {
     foreach ($this->membershipLoader->loadByUser($account) as $group_membership) {
       $group_permission = GroupPermission::loadByGroup($group_membership->getGroup());
       if (!empty($group_permission)) {
+        $calculated_permissions->addCacheableDependency($group_permission);
         $custom_permissions = $group_permission->getPermissions()->first()->getValue();
 
         foreach ($group_membership->getRoles()  as $group_role) {
