@@ -1,0 +1,16 @@
+<?php
+
+/**
+ * @file
+ * Allows you to provide custom permissions per group.
+ */
+use Drupal\group_permissions\Entity\GroupPermission;
+use Drupal\group\Entity\GroupInterface;
+
+/**
+ * Implements hook_entity_delete().
+ */
+function group_permissions_group_delete(GroupInterface $group) {
+  $group_permissions = GroupPermission::loadByGroup($group);
+  $group_permissions->delete();
+}
