@@ -71,8 +71,7 @@ class GroupPermissionCalculator extends GroupPermissionCalculatorBase {
       if (!empty($group_permission)) {
         $calculated_permissions->addCacheableDependency($group_permission);
         $custom_permissions = $group_permission->getPermissions()->first()->getValue();
-
-        foreach ($group_membership->getRoles()  as $group_role) {
+        foreach ($group_membership->getRoles() as $group_role) {
           if (isset($custom_permissions[$group_role->id()])) {
             $item = new CalculatedGroupPermissionsItem(
               CalculatedGroupPermissionsItemInterface::SCOPE_GROUP,
@@ -88,7 +87,6 @@ class GroupPermissionCalculator extends GroupPermissionCalculatorBase {
         $calculated_permissions->addCacheableDependency($group_membership->getGroup());
       }
     }
-
     return $calculated_permissions;
   }
 
@@ -101,7 +99,7 @@ class GroupPermissionCalculator extends GroupPermissionCalculatorBase {
     $group_permissions = $this->entityTypeManager->getStorage('group_permission')->loadMultiple();
     foreach ($group_permissions as $group_permission) {
       $group = $group_permission->getGroup();
-      if (!empty($group_permission)) {
+      if (!empty($group) && !empty($group_permission)) {
         $calculated_permissions->addCacheableDependency($group_permission);
 
         $custom_permissions = $group_permission->getPermissions()
