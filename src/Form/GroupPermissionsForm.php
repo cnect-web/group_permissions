@@ -42,16 +42,6 @@ class GroupPermissionsForm extends BasePermissionForm {
   }
 
   /**
-   * Gets the group type to build the form for.
-   *
-   * @return \Drupal\group\Entity\GroupTypeInterface
-   *   The group type some or more roles belong to.
-   */
-  protected function getGroupType() {
-    return $this->group->getGroupType();
-  }
-
-  /**
    * The entity type manager.
    *
    * @var \Drupal\Core\Entity\EntityTypeManagerInterface
@@ -85,11 +75,20 @@ class GroupPermissionsForm extends BasePermissionForm {
   }
 
   /**
+   * Gets the group type to build the form for.
+   *
+   * @return \Drupal\group\Entity\GroupTypeInterface
+   *   The group type some or more roles belong to.
+   */
+  protected function getGroupType() {
+    return $this->group->getGroupType();
+  }
+
+  /**
    * {@inheritdoc}
    */
   public function buildForm(array $form, FormStateInterface $form_state, Group $group = NULL) {
     $this->group = $group;
-    $this->groupType = $group->getGroupType();
 
     $role_info = [];
 
@@ -366,13 +365,13 @@ class GroupPermissionsForm extends BasePermissionForm {
     return $full_permissions;
   }
 
-
   /**
    * {@inheritdoc}
    */
   protected function getGroupRoles() {
-     $properties = [
-      'group_type' => $this->groupType->id(),
+    $group_type_id = $this->group->getGroupType()->id();
+    $properties = [
+      'group_type' => $group_type_id,
       'permissions_ui' => TRUE,
     ];
 
@@ -383,7 +382,7 @@ class GroupPermissionsForm extends BasePermissionForm {
     uasort($roles, '\Drupal\group\Entity\GroupRole::sort');
 
     $storage = $this->entityTypeManager->getStorage('group_role');
-    $outsider_roles = $storage->loadSynchronizedByGroupTypes([$this->groupType->id()]);
+    $outsider_roles = $storage->loadSynchronizedByGroupTypes([$group_type_id]);
     return array_merge($roles, $outsider_roles);
   }
 

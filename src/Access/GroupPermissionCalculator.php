@@ -12,6 +12,7 @@ use Drupal\group\Entity\GroupType;
 use Drupal\group\GroupMembershipLoaderInterface;
 use Drupal\group\GroupRoleSynchronizerInterface;
 use Drupal\group_permissions\Entity\GroupPermission;
+use Drupal\group_permissions\GroupPermissionsManager;
 
 /**
  * Calculates group permissions for an account.
@@ -33,11 +34,11 @@ class GroupPermissionCalculator extends GroupPermissionCalculatorBase {
   protected $membershipLoader;
 
   /**
-   * The group role synchronizer service.
+   * The group permissions manager.
    *
-   * @var \Drupal\group\GroupRoleSynchronizerInterface
+   * @var \Drupal\group_permissions\GroupPermissionsManager
    */
-  protected $groupRoleSynchronizer;
+  protected $groupPermissionsManager;
 
 
   /**
@@ -47,13 +48,13 @@ class GroupPermissionCalculator extends GroupPermissionCalculatorBase {
    *   The entity type manager.
    * @param \Drupal\group\GroupMembershipLoaderInterface $membership_loader
    *   The group membership loader service.
-   * @param \Drupal\group\GroupRoleSynchronizerInterface $group_role_synchronizer
-   *   The group role synchronizer service.
+   * @param \Drupal\group_permissions\GroupPermissionsManager $group_permissions_manager
+   *   The group permissions manager.
    */
-  public function __construct(EntityTypeManagerInterface $entity_type_manager, GroupMembershipLoaderInterface $membership_loader, GroupRoleSynchronizerInterface $group_role_synchronizer) {
+  public function __construct(EntityTypeManagerInterface $entity_type_manager, GroupMembershipLoaderInterface $membership_loader, GroupPermissionsManager $group_permissions_manager) {
     $this->entityTypeManager = $entity_type_manager;
     $this->membershipLoader = $membership_loader;
-    $this->groupRoleSynchronizer = $group_role_synchronizer;
+    $this->groupPermissionsManager = $group_permissions_manager;
   }
 
   /**
@@ -67,10 +68,10 @@ class GroupPermissionCalculator extends GroupPermissionCalculatorBase {
     $calculated_permissions->addCacheableDependency($user);
 
     foreach ($this->membershipLoader->loadByUser($account) as $group_membership) {
-      $group_permission = GroupPermission::loadByGroup($group_membership->getGroup());
-      if (!empty($group_permission)) {
-        $calculated_permissions->addCacheableDependency($group_permission);
-        $custom_permissions = $group_permission->getPermissions()->first()->getValue();
+      $group = $group_membership->getGroup();
+      $custom_permissions = $this->groupPermissionsManager->getCustomPermissions($group);
+      if (!empty($custom_permissions)) {
+        $calculated_permissions->addCacheableDependency($this->groupPermissionsManager->getGroupPermission($group));
         foreach ($group_membership->getRoles() as $group_role) {
           if (isset($custom_permissions[$group_role->id()])) {
             $item = new CalculatedGroupPermissionsItem(
@@ -84,7 +85,7 @@ class GroupPermissionCalculator extends GroupPermissionCalculatorBase {
           }
         }
 
-        $calculated_permissions->addCacheableDependency($group_membership->getGroup());
+        $calculated_permissions->addCacheableDependency($group);
       }
     }
     return $calculated_permissions;
@@ -96,7 +97,7 @@ class GroupPermissionCalculator extends GroupPermissionCalculatorBase {
   public function calculateAnonymousPermissions() {
     $calculated_permissions = new RefinableCalculatedGroupPermissions();
 
-    $group_permissions = $this->entityTypeManager->getStorage('group_permission')->loadMultiple();
+    $group_permissions = $this->groupPermissionsManager->getAll();
     foreach ($group_permissions as $group_permission) {
       $group = $group_permission->getGroup();
       if (!empty($group) && !empty($group_permission)) {
@@ -136,26 +137,22 @@ class GroupPermissionCalculator extends GroupPermissionCalculatorBase {
     $user = $this->entityTypeManager->getStorage('user')->load($account->id());
     $calculated_permissions->addCacheableDependency($user);
 
-    $group_permissions = $this->entityTypeManager->getStorage('group_permission')->loadMultiple();
+    $group_permissions = $this->groupPermissionsManager->getAll();
+
     foreach ($group_permissions as $group_permission) {
       if (!empty($group_permission)) {
         $group = $group_permission->getGroup();
         $calculated_permissions->addCacheableDependency($group_permission);
 
         // Get all outsider roles.
-        $group_roles[$group->getGroupType()->getOutsiderRole()->id()] = $group->getGroupType()->getOutsiderRole();
-
-        $storage = $this->entityTypeManager->getStorage('group_role');
-        $outsider_roles = $storage->loadMultiple($this->getAccountOutsiderRoles($account, $group->getGroupType()));
-        $group_roles = array_merge($group_roles, $outsider_roles);
-
+        $roles = $this->groupPermissionsManager->getOutsiderRoles($group);
         $calculated_permissions->addCacheableDependency($group_permission);
 
         $custom_permissions = $group_permission->getPermissions()
           ->first()
           ->getValue();
 
-        foreach ($group_roles as $group_role) {
+        foreach ($roles as $group_role) {
           if (isset($custom_permissions[$group_role->id()])) {
             $item = new CalculatedGroupPermissionsItem(
               CalculatedGroupPermissionsItemInterface::SCOPE_GROUP,
@@ -178,12 +175,12 @@ class GroupPermissionCalculator extends GroupPermissionCalculatorBase {
    * Gets account outsider roles.
    *
    * @param \Drupal\Core\Session\AccountInterface $account
-   *   user account.
+   *   User account.
    * @param \Drupal\group\Entity\GroupType $group_type
    *   Group type.
    *
    * @return array
-   *  Roles ids.
+   *   Roles ids.
    */
   protected function getAccountOutsiderRoles(AccountInterface $account, GroupType $group_type) {
     $roles = $account->getRoles(TRUE);
