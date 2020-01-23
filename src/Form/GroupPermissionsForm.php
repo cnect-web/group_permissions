@@ -96,7 +96,7 @@ class GroupPermissionsForm extends BasePermissionForm {
 
     $custom_permissions = [];
     if (!empty($this->groupPermission)) {
-      $custom_permissions = $this->groupPermission->getPermissions()->first()->getValue();
+      $custom_permissions = $this->groupPermission->getPermissions();
     }
 
     $form['override_permissions'] = [

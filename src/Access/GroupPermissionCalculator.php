@@ -103,9 +103,7 @@ class GroupPermissionCalculator extends GroupPermissionCalculatorBase {
       if (!empty($group) && !empty($group_permission)) {
         $calculated_permissions->addCacheableDependency($group_permission);
 
-        $custom_permissions = $group_permission->getPermissions()
-          ->first()
-          ->getValue();
+        $custom_permissions = $group_permission->getPermissions();
 
         $group_role = $group->getGroupType()->getAnonymousRole();
 
@@ -148,9 +146,7 @@ class GroupPermissionCalculator extends GroupPermissionCalculatorBase {
         $roles = $this->groupPermissionsManager->getOutsiderRoles($group);
         $calculated_permissions->addCacheableDependency($group_permission);
 
-        $custom_permissions = $group_permission->getPermissions()
-          ->first()
-          ->getValue();
+        $custom_permissions = $group_permission->getPermissions();
 
         foreach ($roles as $group_role) {
           if (isset($custom_permissions[$group_role->id()])) {

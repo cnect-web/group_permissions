@@ -68,7 +68,7 @@ class GroupPermissionsManager {
    *   Group permission.
    */
   public function setCustomPermission(GroupPermission $group_permission) {
-    $this->customPermissions[$group_permission->getGroup()->id()] = $group_permission;
+    $this->customPermissions[$group_permission->getGroup()->id()] = $group_permission->getPermissions();
   }
 
   /**
@@ -83,7 +83,6 @@ class GroupPermissionsManager {
    * @throws \Drupal\Core\TypedData\Exception\MissingDataException
    */
   public function getCustomPermissions(GroupInterface $group) {
-    $custom_permissions = [];
     $group_id = $group->id();
     if (empty($this->customPermissions[$group_id])) {
       $cid = "custom_group_permissions:$group_id";
@@ -91,30 +90,22 @@ class GroupPermissionsManager {
       if (!$data_cached) {
         /** @var \Drupal\group_permissions\Entity\GroupPermission $group_permission */
         $group_permission = GroupPermission::loadByGroup($group);
-        $tags = [];
         if ($group_permission) {
           $this->groupPermissions[$group_id] = $group_permission;
+          $tags = [];
           $tags[] = "group:$group_id";
           $tags[] = "group_permission:{$group_permission->id()}";
-          $custom_permissions = $group_permission->getPermissions()
-            ->first()
-            ->getValue();
+          $this->customPermissions[$group_id] = $group_permission->getPermissions();
+          // Store the tree into the cache.
+          $this->cacheBackend->set($cid, $this->customPermissions[$group_id], CacheBackendInterface::CACHE_PERMANENT, $tags);
         }
-
-        // Store the tree into the cache.
-        $this->cacheBackend->set($cid, $custom_permissions, CacheBackendInterface::CACHE_PERMANENT, $tags);
       }
       else {
-        $custom_permissions = $data_cached->data;
+        $this->customPermissions[$group_id] = $data_cached->data;
       }
-
-      $this->customPermissions[$group_id] = $custom_permissions;
-    }
-    else {
-      $custom_permissions = $this->customPermissions[$group_id];
     }
 
-    return $custom_permissions;
+    return $this->customPermissions[$group_id];
   }
 
   /**
