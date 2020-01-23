@@ -17,8 +17,9 @@ use Drupal\node\NodeInterface;
  * Implements hook_entity_delete().
  */
 function group_permissions_group_delete(GroupInterface $group) {
-  $group_permissions = GroupPermission::loadByGroup($group);
-  $group_permissions->delete();
+  if ($group_permissions = GroupPermission::loadByGroup($group) ) {
+    $group_permissions->delete();
+  }
 }
 
 /**
@@ -34,11 +35,6 @@ function group_permissions_group_delete(GroupInterface $group) {
  * @see group_permissions_node_access_records()
  */
 function group_permissions_node_grants(AccountInterface $account, $op) {
-  // Provide the master grant for users who can bypass group access.
-  if ($account->hasPermission('bypass group access')) {
-    return ['group_permissions_bypass' => [GROUP_PERMISSIONS_GRANT_ID]];
-  }
-
   // Anonymous users get the anonymous grant. See the implementation in the
   // gnode_node_access_records() function as to why that is.
   if ($account->isAnonymous()) {
@@ -59,64 +55,39 @@ function group_permissions_node_grants(AccountInterface $account, $op) {
   // Initialize a grant array for members and one for outsider users.
   $grants = [];
 
-  // Keep outsider roles for group types.
-  $outsider_roles = [];
+  /** @var \Drupal\group_permissions\GroupPermissionsManager $group_permissions_manager */
+  $group_permissions_manager = \Drupal::service('group_permission.group_permissions_manager');
 
   $group_permissions = $entity_type_manager->getStorage('group_permission')->loadMultiple();
   foreach ($group_permissions as $group_permission) {
+    $group_permissions_manager->setCustomPermission($group_permission);
     $group = $group_permission->getGroup();
     $gid = $group->id();
-    $group_type = $group->getGroupType();
-    $custom_permission = $group_permission->getPermissions()->first()->getValue();
 
-    if (empty($custom_permission)) {
-      continue;
-    }
+    foreach ($node_type_ids as $node_type_id) {
+      $plugin_id = "group_node:$node_type_id";
 
-    if ($group_membership = $group->getMember($account)) {
-      $roles = $group_membership->getRoles();
-    }
-    else {
-      if (empty($outsider_roles[$group_type->id()])) {
-        $storage = $entity_type_manager->getStorage('group_role');
-        $roles = $storage->loadSynchronizedByGroupTypes([$group_type->id()]);
-        $roles[$group_type->getOutsiderRoleId()] = $group_type->getOutsiderRole();
-      }
-      else {
-        $roles = $outsider_roles[$group_type->id()];
-      }
-    }
+      switch ($op) {
+        case 'view':
+          if ($group_permissions_manager->getCustomPermissions("view $plugin_id entity", $group)) {
+            $grants["group_permissions:$node_type_id"][] = $gid;
+          }
+          if ($group_permissions_manager->getCustomPermissions("view unpublished $plugin_id entity", $group)) {
+            $grants["group_permissions_unpublished:$node_type_id"][] = $gid;
+          }
+          break;
 
-    foreach ($roles as $role) {
-      $role_custom_permissions = empty($custom_permission[$role->id()]) ? [] : $custom_permission[$role->id()];
-      if (empty($role_custom_permissions)) {
-        continue;
-      }
-      foreach ($node_type_ids as $node_type_id) {
-        $plugin_id = "group_node:$node_type_id";
-
-        switch ($op) {
-          case 'view':
-            if (in_array("view $plugin_id entity", $role_custom_permissions)) {
-              $grants["group_permissions:$node_type_id"][] = $gid;
-            }
-            if (in_array("view unpublished $plugin_id entity", $role_custom_permissions)) {
-              $grants["group_permissions_unpublished:$node_type_id"][] = $gid;
-            }
-            break;
-
-          case 'update':
-          case 'delete':
-            // If you can act on any node, there's no need for the author grant.
-            if (in_array("$op any $plugin_id entity", $role_custom_permissions)) {
-              $grants["group_permissions:$node_type_id"][] = $gid;
-            }
-            elseif (in_array("$op own $plugin_id entity", $role_custom_permissions)) {
-              $uid = $account->id();
-              $grants["group_permissions_author:$uid:$node_type_id"][] = $gid;
-            }
-            break;
-        }
+        case 'update':
+        case 'delete':
+          // If you can act on any node, there's no need for the author grant.
+          if ($group_permissions_manager->getCustomPermissions("$op any $plugin_id entity", $group)) {
+            $grants["group_permissions:$node_type_id"][] = $gid;
+          }
+          elseif ($group_permissions_manager->getCustomPermissions("$op own $plugin_id entity", $group)) {
+            $uid = $account->id();
+            $grants["group_permissions_author:$uid:$node_type_id"][] = $gid;
+          }
+          break;
       }
     }
   }
@@ -158,15 +129,15 @@ function group_permissions_node_access_records(NodeInterface $node) {
   // Set records for every group the node belongs to.
   $uid = $node->getOwnerId();
   $prefix = $node->isPublished() ? 'group_permissions' : 'group_permissions_unpublished';
+
+  /** @var \Drupal\group_permissions\GroupPermissionsManager $group_permissions_manager */
+  $group_permissions_manager = \Drupal::service('group_permission.group_permissions_manager');
+
   foreach ($group_contents as $group_content) {
     /** @var \Drupal\group\Entity\GroupContentInterface $group_content */
     $group = $group_content->getGroup();
-    $group_permission = GroupPermission::loadByGroup($group);
-    if (!empty($group_permission) && !empty($group_permission->getPermissions()->first()->getValue())) {
-
-      $custom_permissions = $group_permission->getPermissions()->first()->getValue();
-      $group_custom_permissions[] = $group_permission;
-
+    $group_custom_permissions = $group_permissions_manager->getCustomPermissions($group);
+    if (!empty($group_custom_permissions)) {
       $gid = $group->id();
 
       // Add the non-author record for viewing nodes.
@@ -190,29 +161,27 @@ function group_permissions_node_access_records(NodeInterface $node) {
       $can_update = &$anonymous_record['grant_update'];
       $can_delete = &$anonymous_record['grant_delete'];
 
-      $anonymous_custom_permissions = $custom_permissions[$group->getGroupType()->getAnonymousRoleId()];
-
       $view_permission = $node->isPublished()
         ? "view $plugin_id entity"
         : "view unpublished $plugin_id entity";
 
-      if (!$can_view && in_array($view_permission, $anonymous_custom_permissions)) {
+      if (!$can_view && $group_permissions_manager->checkAnonymousRole($view_permission, $group)) {
         $can_view = 1;
       }
-      if (!$can_update && in_array("update any $plugin_id entity", $anonymous_custom_permissions)) {
+      if (!$can_update && $group_permissions_manager->checkAnonymousRole("update any $plugin_id entity", $group)) {
         $can_update = 1;
       }
-      if (!$can_delete && in_array("delete any $plugin_id entity", $anonymous_custom_permissions)) {
+      if (!$can_delete && $group_permissions_manager->checkAnonymousRole("delete any $plugin_id entity", $group)) {
         $can_delete = 1;
       }
 
       // If the node is owned by anonymous, we also need to check for the author
       // permissions following the pattern "$op own $plugin_id entity".
       if ($uid == 0) {
-        if (!$can_update && in_array("update own $plugin_id entity", $anonymous_custom_permissions)) {
+        if (!$can_update && $group_permissions_manager->checkAnonymousRole("update own $plugin_id entity", $group)) {
           $can_update = 1;
         }
-        if (!$can_delete && in_array("delete own $plugin_id entity", $anonymous_custom_permissions)) {
+        if (!$can_delete && $group_permissions_manager->checkAnonymousRole("delete own $plugin_id entity", $group)) {
           $can_delete = 1;
         }
       }
@@ -221,8 +190,6 @@ function group_permissions_node_access_records(NodeInterface $node) {
     }
   }
 
-  // Add the general access bypass record.
-  $records[] = ['gid' => GROUP_PERMISSIONS_GRANT_ID, 'realm' => 'group_permissions_bypass'] + $base;
   return $records;
 }
 

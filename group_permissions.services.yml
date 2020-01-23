@@ -1,6 +1,10 @@
 services:
   group_permission.group_permission_calculator:
     class: 'Drupal\group_permissions\Access\GroupPermissionCalculator'
-    arguments: ['@entity_type.manager', '@group.membership_loader', '@group_role.synchronizer']
+    arguments: ['@entity_type.manager', '@group.membership_loader', '@group_permission.group_permissions_manager']
     tags:
       - { name: group_permission_calculator, priority: -110 }
+
+  group_permission.group_permissions_manager:
+    arguments: ['@cache.default', '@entity_type.manager']
+    class: Drupal\group_permissions\GroupPermissionsManager
