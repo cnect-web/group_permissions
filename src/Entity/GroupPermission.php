@@ -53,7 +53,7 @@ class GroupPermission extends ContentEntityBase implements GroupPermissionInterf
    * {@inheritdoc}
    */
   public function getPermissions() {
-    return $this->permissions->first()->getValue();
+    return !empty($this->permissions->first()) ? $this->permissions->first()->getValue() : [];
   }
 
   /**

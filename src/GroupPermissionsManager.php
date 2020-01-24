@@ -119,7 +119,7 @@ class GroupPermissionsManager {
    */
   public function getGroupPermission(GroupInterface $group) {
     $group_id = $group->id();
-    if (!empty($this->groupPermissions[$group_id])) {
+    if (empty($this->groupPermissions[$group_id])) {
       $this->groupPermissions[$group_id] = GroupPermission::loadByGroup($group);
     }
 
@@ -199,14 +199,13 @@ class GroupPermissionsManager {
    * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
    */
   public function checkOutsiderRoles($permission, GroupInterface $group) {
-    $result = FALSE;
     $custom_permissions = $this->getCustomPermissions($group);
     if (!empty($custom_permissions)) {
       $outsider_roles = $this->getOutsiderRoles($group);
       return $this->checkRoles($permission, $custom_permissions, $outsider_roles);
     }
 
-    return $result;
+    return FALSE;
   }
 
   /**
