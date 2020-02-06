@@ -8,3 +8,7 @@ services:
   group_permission.group_permissions_manager:
     arguments: ['@cache.default', '@entity_type.manager']
     class: Drupal\group_permissions\GroupPermissionsManager
+
+  group_permission.group_permissions_access_records_builder:
+    arguments: ['@group_permission.group_permissions_manager', '@entity_type.manager']
+    class: Drupal\group_permissions\GroupPermissionsAccessRecordsBuilder

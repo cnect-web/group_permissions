@@ -298,4 +298,24 @@ class GroupPermissionsManager {
     return $this->entityTypeManager->getStorage('group_permission')->loadMultiple();
   }
 
+  public function getMemberRolesByGroup($group) {
+    $group_type_id = $group->getGroupType()->id();
+    $properties = [
+      'group_type' => $group_type_id,
+      'permissions_ui' => TRUE,
+    ];
+
+    $roles = $this->entityTypeManager
+      ->getStorage('group_role')
+      ->loadByProperties($properties);
+
+    uasort($roles, '\Drupal\group\Entity\GroupRole::sort');
+    return $roles;
+  }
+
+  public function checkGroupRole($permission, $group, $role_id) {
+    $custom_permissions = $this->getCustomPermissions($group);
+    return !empty($custom_permissions[$role_id]) && in_array($permission, $custom_permissions[$role_id]);
+  }
+
 }
