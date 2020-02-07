@@ -6,6 +6,7 @@ use Drupal\Core\Cache\CacheBackendInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\group\Entity\GroupInterface;
+use Drupal\group\GroupRoleSynchronizerInterface;
 use Drupal\group_permissions\Entity\GroupPermission;
 
 /**
@@ -49,16 +50,27 @@ class GroupPermissionsManager {
   protected $entityTypeManager;
 
   /**
+   * The group role synchronizer service.
+   *
+   * @var \Drupal\group\GroupRoleSynchronizerInterface
+   */
+  protected $groupRoleSynchronizer;
+
+
+  /**
    * Handles custom permissions.
    *
    * @param \Drupal\Core\Cache\CacheBackendInterface $cache_backend
    *   Cache backend.
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
    *   Entity type manager.
+   * @param \Drupal\group\GroupRoleSynchronizerInterface $group_role_synchronizer
+   *   The group role synchronizer service.
    */
-  public function __construct(CacheBackendInterface $cache_backend, EntityTypeManagerInterface $entity_type_manager) {
+  public function __construct(CacheBackendInterface $cache_backend, EntityTypeManagerInterface $entity_type_manager, GroupRoleSynchronizerInterface $group_role_synchronizer) {
     $this->entityTypeManager = $entity_type_manager;
     $this->cacheBackend = $cache_backend;
+    $this->groupRoleSynchronizer = $group_role_synchronizer;
   }
 
   /**
@@ -154,7 +166,7 @@ class GroupPermissionsManager {
       return $this->checkGroupRoles($permission, $group, $account);
     }
     else {
-      return $this->checkOutsiderRoles($permission, $group);
+      return $this->checkOutsiderRoles($permission, $group, $account);
     }
   }
 
@@ -191,6 +203,8 @@ class GroupPermissionsManager {
    *   Permission.
    * @param \Drupal\group\Entity\GroupInterface $group
    *   Group.
+   * @param \Drupal\Core\Session\AccountInterface $account
+   *   Current user.
    *
    * @return bool
    *   Result of check.
@@ -198,10 +212,10 @@ class GroupPermissionsManager {
    * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
    * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
    */
-  public function checkOutsiderRoles($permission, GroupInterface $group) {
+  public function checkOutsiderRoles($permission, GroupInterface $group, AccountInterface $account) {
     $custom_permissions = $this->getCustomPermissions($group);
     if (!empty($custom_permissions)) {
-      $outsider_roles = $this->getOutsiderRoles($group);
+      $outsider_roles = $this->getOutsiderRoles($group, $account);
       return $this->checkRoles($permission, $custom_permissions, $outsider_roles);
     }
 
@@ -236,6 +250,8 @@ class GroupPermissionsManager {
    *
    * @param \Drupal\group\Entity\GroupInterface $group
    *   Group.
+   * @param \Drupal\Core\Session\AccountInterface $account
+   *   Current user.
    *
    * @return mixed
    *   List of outsider roles.
@@ -243,14 +259,16 @@ class GroupPermissionsManager {
    * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
    * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
    */
-  public function getOutsiderRoles(GroupInterface $group) {
+  public function getOutsiderRoles(GroupInterface $group, AccountInterface $account) {
     $group_type = $group->getGroupType();
     $group_type_id = $group_type->id();
     if (empty($this->outsiderRoles[$group_type_id])) {
-      $storage = $this->entityTypeManager->getStorage('group_role');
-      $outsider_roles = $storage->loadSynchronizedByGroupTypes([$group_type_id]);
-      $outsider_roles[$group_type->getOutsiderRoleId()] = $group_type->getOutsiderRole();
 
+      $account_roles = $account->getRoles(TRUE);
+      foreach ($account_roles as $role){
+        $outsider_roles[] = $this->groupRoleSynchronizer->getGroupRoleId($group_type_id, $role);
+      }
+      $outsider_roles[$group_type->getOutsiderRoleId()] = $group_type->getOutsiderRole();
       $this->outsiderRoles[$group_type_id] = $outsider_roles;
     }
 

@@ -143,7 +143,7 @@ class GroupPermissionCalculator extends GroupPermissionCalculatorBase {
         $calculated_permissions->addCacheableDependency($group_permission);
 
         // Get all outsider roles.
-        $roles = $this->groupPermissionsManager->getOutsiderRoles($group);
+        $roles = $this->groupPermissionsManager->getOutsiderRoles($group, $account);
         $calculated_permissions->addCacheableDependency($group_permission);
 
         $custom_permissions = $group_permission->getPermissions();

@@ -3,6 +3,7 @@
 namespace Drupal\group_permissions;
 
 use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Drupal\Core\Session\AccountInterface;
 use Drupal\node\NodeInterface;
 
 class GroupPermissionsAccessRecordsBuilder {
@@ -140,9 +141,43 @@ class GroupPermissionsAccessRecordsBuilder {
     return $records;
   }
 
-  public function grantAccess(){
-    // node_grants logic!
-    return 0;
+  public function grantAccess(AccountInterface $account, string $op){
+    // Use the advanced drupal_static() pattern, since this is called very often.
+    $grants_cache = &drupal_static(__FUNCTION__, []);
+
+    if (isset($grants_cache[$account->id()][$op])) {
+      return $grants_cache[$account->id()][$op];
+    }
+
+    // Anonymous users get the anonymous grant. See the implementation in the
+    // fut_group_node_access_records() function as to why that is.
+    if ($account->isAnonymous()) {
+      return ['group_permissions:anonymous' => [GROUP_PERMISSIONS_GRANT_ID]];
+    }
+
+    $grants = [];
+    $grants['group_permissions:outsider'] = [GROUP_PERMISSIONS_GRANT_ID];
+
+    // Initialize a grant array for members and one for outsider users.
+    $membership_loader = \Drupal::service('group.membership_loader');
+    foreach ($membership_loader->loadByUser($account) as $group_membership) {
+      $group = $group_membership->getGroup();
+
+      $member_roles = $group_membership->getRoles();
+      foreach ($member_roles as $role_id => $role) {
+        $grants["group_permissions:$role_id"][] = $group->id();
+      }
+
+      $outsider_roles = $this->groupPermissionsManager->getOutsiderRoles($group, $account);
+      foreach ($outsider_roles as $role_id => $role) {
+        $grants["group_permissions:$role_id"][] = $group->id();
+      }
+    }
+
+    // Recursively merge the member grants with the outsider grants.
+    $grants_cache[$account->id()][$op] = $grants;
+
+    return $grants_cache[$account->id()][$op];
   }
 
 

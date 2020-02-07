@@ -6,7 +6,7 @@ services:
       - { name: group_permission_calculator, priority: -110 }
 
   group_permission.group_permissions_manager:
-    arguments: ['@cache.default', '@entity_type.manager']
+    arguments: ['@cache.default', '@entity_type.manager', '@group_role.synchronizer']
     class: Drupal\group_permissions\GroupPermissionsManager
 
   group_permission.group_permissions_access_records_builder:
