@@ -265,7 +265,10 @@ class GroupPermissionsManager {
 
       $account_roles = $account->getRoles(TRUE);
       foreach ($account_roles as $role) {
-        $outsider_roles[] = $this->groupRoleSynchronizer->getGroupRoleId($group_type_id, $role);
+        $advanced_outsider_role_id = $this->groupRoleSynchronizer->getGroupRoleId($group_type_id, $role);
+        $outsider_roles[] = $this->entityTypeManager
+          ->getStorage('group_role')
+          ->load($advanced_outsider_role_id);
       }
       $outsider_roles[$group_type->getOutsiderRoleId()] = $group_type->getOutsiderRole();
       $this->outsiderRoles[$group_type_id] = $outsider_roles;
