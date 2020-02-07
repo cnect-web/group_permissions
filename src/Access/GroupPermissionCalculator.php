@@ -10,8 +10,6 @@ use Drupal\group\Access\CalculatedGroupPermissionsItem;
 use Drupal\group\Access\CalculatedGroupPermissionsItemInterface;
 use Drupal\group\Entity\GroupType;
 use Drupal\group\GroupMembershipLoaderInterface;
-use Drupal\group\GroupRoleSynchronizerInterface;
-use Drupal\group_permissions\Entity\GroupPermission;
 use Drupal\group_permissions\GroupPermissionsManager;
 
 /**
@@ -39,7 +37,6 @@ class GroupPermissionCalculator extends GroupPermissionCalculatorBase {
    * @var \Drupal\group_permissions\GroupPermissionsManager
    */
   protected $groupPermissionsManager;
-
 
   /**
    * Constructs a DefaultGroupPermissionCalculator object.

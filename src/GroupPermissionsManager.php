@@ -10,7 +10,7 @@ use Drupal\group\GroupRoleSynchronizerInterface;
 use Drupal\group_permissions\Entity\GroupPermission;
 
 /**
- * Request entity extractor class.
+ * Service to handle custom group permissions.
  */
 class GroupPermissionsManager {
 
@@ -55,7 +55,6 @@ class GroupPermissionsManager {
    * @var \Drupal\group\GroupRoleSynchronizerInterface
    */
   protected $groupRoleSynchronizer;
-
 
   /**
    * Handles custom permissions.
@@ -154,7 +153,7 @@ class GroupPermissionsManager {
    * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
    * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
    */
-  public function hasPermission($permission, GroupInterface $group, AccountInterface $account = NULL) {
+  public function hasPermission(string $permission, GroupInterface $group, AccountInterface $account = NULL) {
     if (!empty($account) && $account->hasPermission('bypass group access')) {
       return TRUE;
     }
@@ -183,7 +182,7 @@ class GroupPermissionsManager {
    *
    * @throws \Drupal\Core\TypedData\Exception\MissingDataException
    */
-  public function checkAnonymousRole($permission, GroupInterface $group) {
+  public function checkAnonymousRole(string $permission, GroupInterface $group) {
     $result = FALSE;
     $custom_permissions = $this->getCustomPermissions($group);
     if (!empty($custom_permissions)) {
@@ -212,7 +211,7 @@ class GroupPermissionsManager {
    * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
    * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
    */
-  public function checkOutsiderRoles($permission, GroupInterface $group, AccountInterface $account) {
+  public function checkOutsiderRoles(string $permission, GroupInterface $group, AccountInterface $account) {
     $custom_permissions = $this->getCustomPermissions($group);
     if (!empty($custom_permissions)) {
       $outsider_roles = $this->getOutsiderRoles($group, $account);
@@ -235,7 +234,7 @@ class GroupPermissionsManager {
    * @return bool
    *   Role has the permission or not.
    */
-  protected function checkRoles($permission, array $custom_permissions = [], array $roles = []) {
+  protected function checkRoles(string $permission, array $custom_permissions = [], array $roles = []) {
     foreach ($roles as $role_name => $role) {
       if (!empty($custom_permissions[$role_name]) && in_array($permission, $custom_permissions[$role_name])) {
         return TRUE;
@@ -265,7 +264,7 @@ class GroupPermissionsManager {
     if (empty($this->outsiderRoles[$group_type_id])) {
 
       $account_roles = $account->getRoles(TRUE);
-      foreach ($account_roles as $role){
+      foreach ($account_roles as $role) {
         $outsider_roles[] = $this->groupRoleSynchronizer->getGroupRoleId($group_type_id, $role);
       }
       $outsider_roles[$group_type->getOutsiderRoleId()] = $group_type->getOutsiderRole();
@@ -290,7 +289,7 @@ class GroupPermissionsManager {
    *
    * @throws \Drupal\Core\TypedData\Exception\MissingDataException
    */
-  public function checkGroupRoles($permission, GroupInterface $group, AccountInterface $account) {
+  public function checkGroupRoles(string $permission, GroupInterface $group, AccountInterface $account) {
     $result = FALSE;
     $custom_permissions = $this->getCustomPermissions($group);
     if (!empty($custom_permissions)) {
@@ -306,7 +305,7 @@ class GroupPermissionsManager {
   /**
    * Get all group permissions objects.
    *
-   * @return \Drupal\Core\Entity\EntityInterface[]
+   * @return \Drupal\group_permissions\Entity\GroupPermissionInterface[]
    *   Group permissions list.
    *
    * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
@@ -316,7 +315,16 @@ class GroupPermissionsManager {
     return $this->entityTypeManager->getStorage('group_permission')->loadMultiple();
   }
 
-  public function getMemberRolesByGroup($group) {
+  /**
+   * Get all member roles of given group.
+   *
+   * @param \Drupal\group\Entity\GroupInterface $group
+   *   The Group.
+   *
+   * @return \Drupal\group\Entity\GroupRoleInterface[]
+   *   An array of group roles.
+   */
+  public function getMemberRolesByGroup(GroupInterface $group) {
     $group_type_id = $group->getGroupType()->id();
     $properties = [
       'group_type' => $group_type_id,
@@ -331,7 +339,20 @@ class GroupPermissionsManager {
     return $roles;
   }
 
-  public function checkGroupRole($permission, $group, $role_id) {
+  /**
+   * Checks if given permissions is in place for given role in given group.
+   *
+   * @param string $permission
+   *   Permission.
+   * @param \Drupal\group\Entity\GroupInterface $group
+   *   The Group.
+   * @param string $role_id
+   *   The group role ID.
+   *
+   * @return bool
+   *   TRUE if custom permission is in place.
+   */
+  public function checkGroupRole(string $permission, GroupInterface $group, string $role_id) {
     $custom_permissions = $this->getCustomPermissions($group);
     return !empty($custom_permissions[$role_id]) && in_array($permission, $custom_permissions[$role_id]);
   }

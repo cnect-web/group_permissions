@@ -5,6 +5,7 @@ namespace Drupal\group_permissions\Entity;
 use Drupal\Core\Entity\ContentEntityBase;
 use Drupal\Core\Entity\EntityTypeInterface;
 use Drupal\Core\Field\BaseFieldDefinition;
+use Drupal\group\Entity\GroupInterface;
 
 /**
  * Defines the Group permission entity.
@@ -31,6 +32,9 @@ use Drupal\Core\Field\BaseFieldDefinition;
 class GroupPermission extends ContentEntityBase implements GroupPermissionInterface {
 
   /**
+   * Whether entity validation is required before saving the entity.
+   *
+   * @var bool
    * @see https://www.drupal.org/project/drupal/issues/2847319
    */
   protected $validationRequired = TRUE;
@@ -87,7 +91,16 @@ class GroupPermission extends ContentEntityBase implements GroupPermissionInterf
     return $fields;
   }
 
-  public static function loadByGroup($group) {
+  /**
+   * Retrieves Group permission entity for a group.
+   *
+   * @param \Drupal\group\Entity\GroupInterface $group
+   *   The group entity to load the group content entities for.
+   *
+   * @return \Drupal\group\Entity\GroupPermissiontInterface|null
+   *   The GroupPermission entity of given group OR NULL if not existing.
+   */
+  public static function loadByGroup(GroupInterface $group) {
     $storage = \Drupal::entityTypeManager()->getStorage('group_permission');
     return $storage->loadByGroup($group);
   }

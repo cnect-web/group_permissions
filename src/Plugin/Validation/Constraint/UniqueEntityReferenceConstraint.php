@@ -16,6 +16,11 @@ use Symfony\Component\Validator\Constraint;
  */
 class UniqueEntityReferenceConstraint extends Constraint {
 
+  /**
+   * The default violation message.
+   *
+   * @var string
+   */
   public $message = 'A @entity_type with @field_name %value already exists.';
 
   /**

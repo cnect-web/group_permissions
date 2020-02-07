@@ -10,5 +10,5 @@ services:
     class: Drupal\group_permissions\GroupPermissionsManager
 
   group_permission.group_permissions_access_records_builder:
-    arguments: ['@group_permission.group_permissions_manager', '@entity_type.manager']
+    arguments: ['@group_permission.group_permissions_manager', '@entity_type.manager', '@group.membership_loader']
     class: Drupal\group_permissions\GroupPermissionsAccessRecordsBuilder

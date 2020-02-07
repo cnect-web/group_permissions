@@ -3,7 +3,7 @@
 namespace Drupal\group_permissions\Entity;
 
 use Drupal\Core\Entity\ContentEntityInterface;
-use Drupal\group\Entity\Group;
+use Drupal\group\Entity\GroupInterface;
 
 /**
  * Provides an interface for defining Group permission entities.
@@ -23,10 +23,10 @@ interface GroupPermissionInterface extends ContentEntityInterface {
   /**
    * Sets the Group.
    *
-   * @param Group $gid
+   * @param \Drupal\group\Entity\GroupInterface $group
    *   The Group.
    */
-  public function setGroup($group);
+  public function setGroup(GroupInterface $group);
 
   /**
    * Gets group permissions.
@@ -39,10 +39,9 @@ interface GroupPermissionInterface extends ContentEntityInterface {
   /**
    * Sets the Group.
    *
-   * @param Group $permissions
+   * @param array $permissions
    *   Group permissions.
    */
   public function setPermissions(array $permissions);
-
 
 }

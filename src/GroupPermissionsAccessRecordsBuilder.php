@@ -4,8 +4,12 @@ namespace Drupal\group_permissions;
 
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Session\AccountInterface;
+use Drupal\group\GroupMembershipLoaderInterface;
 use Drupal\node\NodeInterface;
 
+/**
+ * Service to build access records based on group_permissions.
+ */
 class GroupPermissionsAccessRecordsBuilder {
 
   /**
@@ -23,16 +27,27 @@ class GroupPermissionsAccessRecordsBuilder {
   protected $entityTypeManager;
 
   /**
+   * The membership loader service.
+   *
+   * @var \Drupal\group\GroupMembershipLoaderInterface
+   */
+  protected $membershipLoader;
+
+  /**
    * Constructs a new ActivityRecordStorage object.
    *
    * @param \Drupal\group_permissions\GroupPermissionsManager $group_permissions_manager
    *   The GroupPermissionsManager service.
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
    *   Entity type manager.
+   * @param \Drupal\group\GroupMembershipLoaderInterface $membership_loader
+   *   The group membership loader service.
    */
-  public function __construct(GroupPermissionsManager $group_permissions_manager, EntityTypeManagerInterface $entity_type_manager) {
+  public function __construct(GroupPermissionsManager $group_permissions_manager, EntityTypeManagerInterface $entity_type_manager, GroupMembershipLoaderInterface $membership_loader) {
     $this->groupPermissionsManager = $group_permissions_manager;
     $this->entityTypeManager = $entity_type_manager;
+    $this->membershipLoader = $membership_loader;
+
   }
 
   /**
@@ -44,7 +59,7 @@ class GroupPermissionsAccessRecordsBuilder {
    * @return array
    *   Access Records.
    */
-  public function buildAccessRecords(NodeInterface $node){
+  public function buildAccessRecords(NodeInterface $node) {
     $records = [];
     $node_type_id = $node->bundle();
     $plugin_id = "group_node:$node_type_id";
@@ -73,7 +88,7 @@ class GroupPermissionsAccessRecordsBuilder {
         $roles = $this->groupPermissionsManager->getMemberRolesByGroup($group);
         foreach ($roles as $role_id => $role) {
           if ($role_id != $group->getGroupType()->getAnonymousRoleId() && $role_id != $group->getGroupType()->getOutsiderRoleId()) {
-            //Add per role record.
+            // Add per role record.
             $records[] = [
               'gid' => $group->id(),
               'realm' => "$prefix:$role_id",
@@ -85,7 +100,7 @@ class GroupPermissionsAccessRecordsBuilder {
           }
         }
 
-        //Add outsider record.
+        // Add outsider record.
         $outsider_role_id = $group->getGroupType()->getOutsiderRoleId();
         $records[] = [
           'gid' => GROUP_PERMISSIONS_GRANT_ID,
@@ -141,7 +156,19 @@ class GroupPermissionsAccessRecordsBuilder {
     return $records;
   }
 
-  public function grantAccess(AccountInterface $account, string $op){
+  /**
+   * Assemble a list of "grant IDs" for given account.
+   *
+   * @param \Drupal\Core\Session\AccountInterface $account
+   *   The account object whose grants are requested.
+   * @param string $op
+   *   The node operation.
+   *
+   * @return array
+   *   An array whose keys are "realms" of grants, and whose values are arrays of
+   *   the grant IDs within this realm that this user is being granted.
+   */
+  public function grantAccess(AccountInterface $account, string $op) {
     // Use the advanced drupal_static() pattern, since this is called very often.
     $grants_cache = &drupal_static(__FUNCTION__, []);
 
@@ -159,8 +186,7 @@ class GroupPermissionsAccessRecordsBuilder {
     $grants['group_permissions:outsider'] = [GROUP_PERMISSIONS_GRANT_ID];
 
     // Initialize a grant array for members and one for outsider users.
-    $membership_loader = \Drupal::service('group.membership_loader');
-    foreach ($membership_loader->loadByUser($account) as $group_membership) {
+    foreach ($this->membershipLoader->loadByUser($account) as $group_membership) {
       $group = $group_membership->getGroup();
 
       $member_roles = $group_membership->getRoles();
@@ -179,6 +205,5 @@ class GroupPermissionsAccessRecordsBuilder {
 
     return $grants_cache[$account->id()][$op];
   }
-
 
 }

@@ -23,14 +23,14 @@ class GroupPermissionsForm extends BasePermissionForm {
   /**
    * Group.
    *
-   * @var \Drupal\group\Entity\Group;
+   * @var \Drupal\group\Entity\Group
    */
   protected $group;
 
   /**
    * GroupPermission.
    *
-   * @var \Drupal\group_permissions\Entity\GroupPermission;
+   * @var \Drupal\group_permissions\Entity\GroupPermission
    */
   protected $groupPermission;
 
@@ -113,7 +113,6 @@ class GroupPermissionsForm extends BasePermissionForm {
     // See \Drupal\Core\Config\Entity\ConfigEntityBase::sort().
     $group_roles = $this->getGroupRoles();
 
-
     // Retrieve information for every role to user further down. We do this to
     // prevent the same methods from being fired (rows * permissions) times.
     foreach ($group_roles as $role_name => $group_role) {
@@ -184,12 +183,12 @@ class GroupPermissionsForm extends BasePermissionForm {
             'id' => "module-$provider",
           ],
           '#markup' => $this->moduleHandler->getName($provider),
-        ]
+        ],
       ];
 
       foreach ($sections as $section => $permissions) {
         // Create a clean section ID.
-        $section_id = $provider. '-' . preg_replace('/[^a-z0-9_]+/', '_', strtolower($section));
+        $section_id = $provider . '-' . preg_replace('/[^a-z0-9_]+/', '_', strtolower($section));
 
         // Start each section with a full width row containing the section name.
         $form['permissions'][$section_id] = [
@@ -200,7 +199,7 @@ class GroupPermissionsForm extends BasePermissionForm {
               'id' => "section-$section_id",
             ],
             '#markup' => $section,
-          ]
+          ],
         ];
 
         // Then list all of the permissions for that provider and section.
@@ -256,13 +255,13 @@ class GroupPermissionsForm extends BasePermissionForm {
                   'class' => [
                     "rid-$role_name",
                     "js-rid-$role_name",
-                  ]
+                  ],
                 ],
                 '#parents' => [$role_name, $perm],
                 '#states' => [
                   'disabled' => [
                     ':input[name="override_permissions"]' => [
-                      'value' => self::USE_DEFAULT
+                      'value' => self::USE_DEFAULT,
                     ],
                   ],
                 ],
@@ -309,7 +308,7 @@ class GroupPermissionsForm extends BasePermissionForm {
   /**
    * {@inheritdoc}
    */
-  function submitForm(array &$form, FormStateInterface $form_state) {
+  public function submitForm(array &$form, FormStateInterface $form_state) {
 
     if ($form_state->getValue('override_permissions') == self::OVERRIDE) {
       $permissions = [];
