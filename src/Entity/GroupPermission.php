@@ -49,7 +49,7 @@ class GroupPermission extends ContentEntityBase implements GroupPermissionInterf
   /**
    * {@inheritdoc}
    */
-  public function setGroup($group) {
+  public function setGroup(GroupInterface $group) {
     return $this->gid = $group->id();
   }
 
