@@ -10,7 +10,7 @@ use Drupal\node\NodeInterface;
 /**
  * Service to build access records based on group_permissions.
  */
-class GroupPermissionsAccessRecordsBuilder {
+class GroupPermissionsNodeAccessRecordsBuilder implements GroupPermissionsNodeAccessRecordsBuilderInterface {
 
   /**
    * The GroupPermissionsManager service.
@@ -51,13 +51,7 @@ class GroupPermissionsAccessRecordsBuilder {
   }
 
   /**
-   * Builds Access Record for given Node.
-   *
-   * @param \Drupal\node\NodeInterface $node
-   *   The node which access record is being built.
-   *
-   * @return array
-   *   Access Records.
+   * {@inheritdoc}
    */
   public function buildAccessRecords(NodeInterface $node) {
     $records = [];
@@ -100,14 +94,24 @@ class GroupPermissionsAccessRecordsBuilder {
           }
         }
 
+        // Add author record.
+        $records[] = [
+          'gid' => $uid,
+          'realm' => "$prefix:author",
+          'grant_view' => (int) $this->groupPermissionsManager->checkGroupRoles($view_permission, $group, $node->getOwner()),
+          'grant_update' => (int) $this->groupPermissionsManager->checkGroupRoles("update own $plugin_id entity", $group, $node->getOwner()),
+          'grant_delete' => (int) $this->groupPermissionsManager->checkGroupRoles("delete own $plugin_id entity", $group, $node->getOwner()),
+          'priority' => 0,
+        ];
+
         // Add outsider record.
         $outsider_role_id = $group->getGroupType()->getOutsiderRoleId();
         $records[] = [
           'gid' => GROUP_PERMISSIONS_GRANT_ID,
           'realm' => "$prefix:outsider",
           'grant_view' => (int) $this->groupPermissionsManager->checkGroupRole($view_permission, $group, $outsider_role_id),
-          'grant_update' => (int) $this->groupPermissionsManager->checkGroupRole("update any $plugin_id entity", $group, $role_id),
-          'grant_delete' => (int) $this->groupPermissionsManager->checkGroupRole("delete any $plugin_id entity", $group, $role_id),
+          'grant_update' => (int) $this->groupPermissionsManager->checkGroupRole("update any $plugin_id entity", $group, $outsider_role_id),
+          'grant_delete' => (int) $this->groupPermissionsManager->checkGroupRole("delete any $plugin_id entity", $group, $outsider_role_id),
           'priority' => 0,
         ];
 
@@ -157,20 +161,11 @@ class GroupPermissionsAccessRecordsBuilder {
   }
 
   /**
-   * Assemble a list of "grant IDs" for given account.
-   *
-   * @param \Drupal\Core\Session\AccountInterface $account
-   *   The account object whose grants are requested.
-   * @param string $op
-   *   The node operation.
-   *
-   * @return array
-   *   An array whose keys are "realms" of grants, and whose values are arrays of
-   *   the grant IDs within this realm that this user is being granted.
+   * {@inheritdoc}
    */
   public function grantAccess(AccountInterface $account, string $op) {
     // Use the advanced drupal_static() pattern, since this is called very often.
-    $grants_cache = &drupal_static(__FUNCTION__, []);
+    $grants_cache = &drupal_static(__METHOD__, []);
 
     if (isset($grants_cache[$account->id()][$op])) {
       return $grants_cache[$account->id()][$op];
@@ -184,6 +179,9 @@ class GroupPermissionsAccessRecordsBuilder {
 
     $grants = [];
     $grants['group_permissions:outsider'] = [GROUP_PERMISSIONS_GRANT_ID];
+
+    // Author grants.
+    $grants['group_permissions:author'] = [$account->id()];
 
     // Initialize a grant array for members and one for outsider users.
     foreach ($this->membershipLoader->loadByUser($account) as $group_membership) {

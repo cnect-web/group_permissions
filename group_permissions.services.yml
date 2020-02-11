@@ -9,6 +9,6 @@ services:
     arguments: ['@cache.default', '@entity_type.manager', '@group_role.synchronizer']
     class: Drupal\group_permissions\GroupPermissionsManager
 
-  group_permission.group_permissions_access_records_builder:
+  group_permission.group_permissions_node_access_records_builder:
     arguments: ['@group_permission.group_permissions_manager', '@entity_type.manager', '@group.membership_loader']
-    class: Drupal\group_permissions\GroupPermissionsAccessRecordsBuilder
+    class: Drupal\group_permissions\GroupPermissionsNodeAccessRecordsBuilder

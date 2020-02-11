@@ -8,10 +8,11 @@
 define('GROUP_PERMISSIONS_GRANT_ID', 2019);
 
 use Drupal\Core\Session\AccountInterface;
-use Drupal\group\Entity\Group;
 use Drupal\group_permissions\Entity\GroupPermission;
 use Drupal\group\Entity\GroupInterface;
 use Drupal\node\NodeInterface;
+use Drupal\group_permissions\Entity\GroupPermissionInterface;
+use Drupal\group\Entity\GroupContentType;
 
 /**
  * Implements hook_entity_delete().
@@ -35,7 +36,7 @@ function group_permissions_group_delete(GroupInterface $group) {
  * @see group_permissions_node_access_records()
  */
 function group_permissions_node_grants(AccountInterface $account, $op) {
-  $grants =  \Drupal::service('group_permission.group_permissions_access_records_builder')->grantAccess($account, $op);
+  $grants =  \Drupal::service('group_permission.group_permissions_node_access_records_builder')->grantAccess($account, $op);
   return $grants;
 }
 
@@ -45,7 +46,7 @@ function group_permissions_node_grants(AccountInterface $account, $op) {
  * @see group_permissions_node_grants()
  */
 function group_permissions_node_access_records(NodeInterface $node) {
-  $records = \Drupal::service('group_permission.group_permissions_access_records_builder')->buildAccessRecords($node);
+  $records = \Drupal::service('group_permission.group_permissions_node_access_records_builder')->buildAccessRecords($node);
   return $records;
 }
 
@@ -59,4 +60,29 @@ function group_permissions_node_access_records_alter(&$grants, Drupal\node\NodeI
       unset($grants[$key]);
     }
   }
+}
+
+/**
+ * Implements hook_ENTITY_TYPE_update().
+ *
+ * Group permissions was updated we need to rebuild node access records dynamically.
+ */
+function group_permissions_group_permission_update(GroupPermissionInterface $entity) {
+  // First we get all GroupContentTypes related to nodes.
+  $group_content_types = GroupContentType::loadByEntityTypeId('node');
+
+  $storage = \Drupal::entityTypeManager()->getStorage('group_content');
+  $group_nodes = [];
+
+  foreach ($group_content_types as $group_content_type){
+    $group_nodes = array_merge($group_nodes, $storage->loadByGroup($entity->getGroup(), $group_content_type->getContentPluginId()));
+  }
+
+  // Rebuild access records for all group nodes.
+  foreach ($group_nodes as $group_node){
+    $node = $group_node->getEntity();
+    $access_record =  \Drupal::service('group_permission.group_permissions_node_access_records_builder')->buildAccessRecords($node);
+    \Drupal::service('node.grant_storage')->write($node, $access_record, NULL);
+  }
+
 }
