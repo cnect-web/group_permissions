@@ -36,8 +36,7 @@ function group_permissions_group_delete(GroupInterface $group) {
  * @see group_permissions_node_access_records()
  */
 function group_permissions_node_grants(AccountInterface $account, $op) {
-  $grants =  \Drupal::service('group_permission.group_permissions_node_access_records_builder')->grantAccess($account, $op);
-  return $grants;
+  return \Drupal::service('group_permission.group_permissions_node_access_records_builder')->grantAccess($account, $op);
 }
 
 /**
@@ -46,8 +45,7 @@ function group_permissions_node_grants(AccountInterface $account, $op) {
  * @see group_permissions_node_grants()
  */
 function group_permissions_node_access_records(NodeInterface $node) {
-  $records = \Drupal::service('group_permission.group_permissions_node_access_records_builder')->buildAccessRecords($node);
-  return $records;
+  return \Drupal::service('group_permission.group_permissions_node_access_records_builder')->buildAccessRecords($node);
 }
 
 /**
@@ -73,9 +71,9 @@ function group_permissions_group_permission_update(GroupPermissionInterface $ent
 
   $storage = \Drupal::entityTypeManager()->getStorage('group_content');
   $group_nodes = [];
-
+  $group = $entity->getGroup();
   foreach ($group_content_types as $group_content_type){
-    $group_nodes = array_merge($group_nodes, $storage->loadByGroup($entity->getGroup(), $group_content_type->getContentPluginId()));
+    $group_nodes = array_merge($group_nodes, $storage->loadByGroup($group, $group_content_type->getContentPluginId()));
   }
 
   // Rebuild access records for all group nodes.
