@@ -55,8 +55,7 @@ class GroupPermissionsNodeAccessRecordsBuilder implements GroupPermissionsNodeAc
    */
   public function buildAccessRecords(NodeInterface $node) {
     $records = [];
-    $node_type_id = $node->bundle();
-    $plugin_id = "group_node:$node_type_id";
+    $plugin_id = "group_node:{$node->bundle()}";
 
     // Load all of the group content for this node.
     $group_contents = $this->entityTypeManager

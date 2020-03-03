@@ -7,6 +7,8 @@
 
 define('GROUP_PERMISSIONS_GRANT_ID', 2019);
 
+use Drupal\Core\Access\AccessResult;
+use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\group_permissions\Entity\GroupPermission;
 use Drupal\group\Entity\GroupInterface;
@@ -36,8 +38,7 @@ function group_permissions_group_delete(GroupInterface $group) {
  * @see group_permissions_node_access_records()
  */
 function group_permissions_node_grants(AccountInterface $account, $op) {
-  $grants =  \Drupal::service('group_permission.group_permissions_node_access_records_builder')->grantAccess($account, $op);
-  return $grants;
+  return \Drupal::service('group_permission.group_permissions_node_access_records_builder')->grantAccess($account, $op);
 }
 
 /**
@@ -46,8 +47,7 @@ function group_permissions_node_grants(AccountInterface $account, $op) {
  * @see group_permissions_node_grants()
  */
 function group_permissions_node_access_records(NodeInterface $node) {
-  $records = \Drupal::service('group_permission.group_permissions_node_access_records_builder')->buildAccessRecords($node);
-  return $records;
+  return \Drupal::service('group_permission.group_permissions_node_access_records_builder')->buildAccessRecords($node);
 }
 
 /**
@@ -73,9 +73,9 @@ function group_permissions_group_permission_update(GroupPermissionInterface $ent
 
   $storage = \Drupal::entityTypeManager()->getStorage('group_content');
   $group_nodes = [];
-
+  $group = $entity->getGroup();
   foreach ($group_content_types as $group_content_type){
-    $group_nodes = array_merge($group_nodes, $storage->loadByGroup($entity->getGroup(), $group_content_type->getContentPluginId()));
+    $group_nodes = array_merge($group_nodes, $storage->loadByGroup($group, $group_content_type->getContentPluginId()));
   }
 
   // Rebuild access records for all group nodes.
@@ -86,3 +86,77 @@ function group_permissions_group_permission_update(GroupPermissionInterface $ent
   }
 
 }
+
+/**
+ * Implements hook_node_access().
+ *
+ * When trying to view, update or delete a node it suffices to have the right to
+ * do so in only one group the node belongs to. If you wish to prevent any such
+ * action on your own terms, implement hook_node_access() in your module.
+ */
+function group_permissions_node_access(NodeInterface $node, $op, AccountInterface $account) {
+  // We do not care about create access as we have our own wizard for that. Any
+  // operation aside from 'view', 'update' and 'delete' is also unsupported.
+  if (!in_array($op, ['view', 'update', 'delete'])) {
+    return AccessResult::neutral();
+  }
+
+  // Some modules, including the code in \Drupal\node\NodeForm::access() may
+  // check for 'view', 'update' or 'delete' access on new nodes, even though
+  // that makes little sense. We need to account for it to avoid crashes because
+  // we would otherwise query the DB with a non-existent node ID.
+  if ($node->isNew()) {
+    return AccessResult::neutral();
+  }
+
+  $plugin_id = "group_node:{$node->bundle()}";
+
+  // Load all of the group content for this node.
+  $group_contents = \Drupal::entityTypeManager()
+    ->getStorage('group_content')
+    ->loadByEntity($node);
+
+  // If the node does not belong to any group, we have nothing to say.
+  if (empty($group_contents)) {
+    return AccessResult::neutral();
+  }
+
+  /** @var \Drupal\group\Entity\GroupInterface[] $groups */
+  $groups = [];
+  foreach ($group_contents as $group_content) {
+    /** @var \Drupal\group\Entity\GroupContentInterface $group_content */
+    $group = $group_content->getGroup();
+    $groups[$group->id()] = $group;
+  }
+
+  /** @var \Drupal\group_permissions\GroupPermissionsManager $group_permissions_manager */
+  $group_permissions_manager = \Drupal::service('group_permission.group_permissions_manager');
+
+  $check_permission = FALSE;
+  foreach ($groups as $group) {
+    $group_permission = $group_permissions_manager->getGroupPermission($group);
+    if (empty($group_permission)) {
+      continue;
+    }
+
+    $permission = '';
+    switch ($op) {
+      case 'view':
+        $permission = $node->isPublished() ? "view $plugin_id entity" : "view unpublished $plugin_id entity";
+        break;
+
+      case 'update':
+      case 'delete':
+        $permission = $account->id() == $node->getOwnerId() ? "$op own $plugin_id entity" : "$op any $plugin_id entity";
+        break;
+    }
+
+    if ($group_permissions_manager->hasPermission($permission, $account, $group)) {
+      $check_permission = TRUE;
+      break;
+    }
+  }
+
+  return $check_permission ? AccessResult::allowed() : AccessResult::forbidden();
+}
+
