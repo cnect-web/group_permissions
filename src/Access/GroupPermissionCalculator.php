@@ -94,6 +94,8 @@ class GroupPermissionCalculator extends GroupPermissionCalculatorBase {
   public function calculateAnonymousPermissions() {
     $calculated_permissions = new RefinableCalculatedGroupPermissions();
 
+    $calculated_permissions->addCacheTags(['group_list']);
+
     $group_permissions = $this->groupPermissionsManager->getAll();
     foreach ($group_permissions as $group_permission) {
       $group = $group_permission->getGroup();
@@ -127,6 +129,7 @@ class GroupPermissionCalculator extends GroupPermissionCalculatorBase {
   public function calculateOutsiderPermissions(AccountInterface $account) {
 
     $calculated_permissions = new RefinableCalculatedGroupPermissions();
+    $calculated_permissions->addCacheTags(['group_list']);
     $calculated_permissions->addCacheContexts(['user']);
 
     $user = $this->entityTypeManager->getStorage('user')->load($account->id());

@@ -72,7 +72,6 @@ class GroupPermissionsChainGroupPermissionCalculator extends ChainGroupPermissio
     }
     // Otherwise build the permissions and store them in the persistent cache.
     else {
-//      exit('doCacheableCalculation');
       $calculated_permissions = new GroupPermissionsRefinableCalculatedGroupPermissions();
       foreach ($this->getCalculators() as $calculator) {
         $calculated_permissions = $calculated_permissions->merge(call_user_func_array([$calculator, $method], $args), TRUE);
