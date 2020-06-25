@@ -173,14 +173,19 @@ class GroupPermissionsNodeAccessRecordsBuilder implements GroupPermissionsNodeAc
     // Anonymous users get the anonymous grant. See the implementation in the
     // fut_group_node_access_records() function as to why that is.
     if ($account->isAnonymous()) {
-      return ['group_permissions:anonymous' => [GROUP_PERMISSIONS_GRANT_ID]];
+      return [
+        'group_permissions:anonymous' => [GROUP_PERMISSIONS_GRANT_ID],
+        'group_permissions_unpublished:anonymous' => [GROUP_PERMISSIONS_GRANT_ID],
+      ];
     }
 
     $grants = [];
     $grants['group_permissions:outsider'] = [GROUP_PERMISSIONS_GRANT_ID];
+    $grants['group_permissions_unpublished:outsider'] = [GROUP_PERMISSIONS_GRANT_ID];
 
     // Author grants.
     $grants['group_permissions:author'] = [$account->id()];
+    $grants['group_permissions_unpublished:author'] = [$account->id()];
 
     // Initialize a grant array for members and one for outsider users.
     foreach ($this->membershipLoader->loadByUser($account) as $group_membership) {
@@ -189,11 +194,13 @@ class GroupPermissionsNodeAccessRecordsBuilder implements GroupPermissionsNodeAc
       $member_roles = $group_membership->getRoles();
       foreach ($member_roles as $role_id => $role) {
         $grants["group_permissions:$role_id"][] = $group->id();
+        $grants["group_permissions_unpublished:$role_id"][] = $group->id();
       }
 
       $outsider_roles = $this->groupPermissionsManager->getOutsiderRoles($group, $account);
       foreach ($outsider_roles as $role_id => $role) {
         $grants["group_permissions:$role_id"][] = $group->id();
+        $grants["group_permissions_unpublished:$role_id"][] = $group->id();
       }
     }
 

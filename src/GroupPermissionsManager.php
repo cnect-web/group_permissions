@@ -95,6 +95,7 @@ class GroupPermissionsManager {
    */
   public function getCustomPermissions(GroupInterface $group) {
     $group_id = $group->id();
+    $this->customPermissions[$group_id] = [];
     if (empty($this->customPermissions[$group_id])) {
       $cid = "custom_group_permissions:$group_id";
       $data_cached = $this->cacheBackend->get($cid);
