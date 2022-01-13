@@ -57,6 +57,13 @@ class GroupPermissionsManager {
   protected $groupRoleSynchronizer;
 
   /**
+   * The role storage
+   *
+   * @var \Drupal\Core\Entity\EntityStorageInterface
+   */
+  protected $role_storage;
+
+  /**
    * Handles custom permissions.
    *
    * @param \Drupal\Core\Cache\CacheBackendInterface $cache_backend

@@ -99,7 +99,7 @@ class GroupPermissionsNodeAccessRecordsBuilder implements GroupPermissionsNodeAc
    * @return array
    *   Group access records.
    */
-  public function getGroupRecords($group, $node) {
+  public function getGroupRecords(GroupInterface $group, NodeInterface $node) {
     $records = [];
      if (empty($this->groupPermissionsManager->getCustomPermissions($group))) {
        return $records;
