@@ -20,13 +20,6 @@ class GroupPermissionsNodeAccessRecordsBuilder implements GroupPermissionsNodeAc
   protected $groupPermissionsManager;
 
   /**
-   * The entity type manager.
-   *
-   * @var \Drupal\Core\Entity\EntityTypeManagerInterface
-   */
-  protected $entityTypeManager;
-
-  /**
    * The membership loader service.
    *
    * @var \Drupal\group\GroupMembershipLoaderInterface
@@ -41,6 +34,13 @@ class GroupPermissionsNodeAccessRecordsBuilder implements GroupPermissionsNodeAc
   protected $group_records;
 
   /**
+   * The role storage
+   *
+   * @var \Drupal\Core\Entity\EntityStorageInterface
+   */
+  protected $group_content_storage;
+
+  /**
    * Constructs a new ActivityRecordStorage object.
    *
    * @param \Drupal\group_permissions\GroupPermissionsManager $group_permissions_manager
@@ -52,9 +52,8 @@ class GroupPermissionsNodeAccessRecordsBuilder implements GroupPermissionsNodeAc
    */
   public function __construct(GroupPermissionsManager $group_permissions_manager, EntityTypeManagerInterface $entity_type_manager, GroupMembershipLoaderInterface $membership_loader) {
     $this->groupPermissionsManager = $group_permissions_manager;
-    $this->entityTypeManager = $entity_type_manager;
     $this->membershipLoader = $membership_loader;
-
+    $this->group_content_storage = $entity_type_manager->getStorage('group_content');
   }
 
   /**
@@ -64,9 +63,7 @@ class GroupPermissionsNodeAccessRecordsBuilder implements GroupPermissionsNodeAc
     $records = [];
 
     // Load all of the group content for this node.
-    $group_contents = $this->entityTypeManager
-      ->getStorage('group_content')
-      ->loadByEntity($node);
+    $group_contents = $this->group_content_storage->loadByEntity($node);
 
     // Only act if there are group content entities for this node.
     if (empty($group_contents)) {
