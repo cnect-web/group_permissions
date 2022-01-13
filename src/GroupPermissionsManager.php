@@ -70,6 +70,7 @@ class GroupPermissionsManager {
     $this->entityTypeManager = $entity_type_manager;
     $this->cacheBackend = $cache_backend;
     $this->groupRoleSynchronizer = $group_role_synchronizer;
+    $this->role_storage = $this->entityTypeManager->getStorage('group_role');
   }
 
   /**
@@ -95,7 +96,6 @@ class GroupPermissionsManager {
    */
   public function getCustomPermissions(GroupInterface $group) {
     $group_id = $group->id();
-    $this->customPermissions[$group_id] = [];
     if (empty($this->customPermissions[$group_id])) {
       $cid = "custom_group_permissions:$group_id";
       $data_cached = $this->cacheBackend->get($cid);
@@ -115,6 +115,9 @@ class GroupPermissionsManager {
       else {
         $this->customPermissions[$group_id] = $data_cached->data;
       }
+    }
+    else {
+      $this->customPermissions[$group_id] = [];
     }
 
     return $this->customPermissions[$group_id];
@@ -188,9 +191,7 @@ class GroupPermissionsManager {
     $custom_permissions = $this->getCustomPermissions($group);
     if (!empty($custom_permissions)) {
       $role_id = $group->getGroupType()->getAnonymousRoleId();
-      if (!empty($custom_permissions[$role_id]) && in_array($permission, $custom_permissions[$role_id])) {
-        return TRUE;
-      }
+      return !empty($custom_permissions[$role_id]) && in_array($permission, $custom_permissions[$role_id]);
     }
 
     return $result;
@@ -267,8 +268,7 @@ class GroupPermissionsManager {
       $account_roles = $account->getRoles(TRUE);
       foreach ($account_roles as $role) {
         $advanced_outsider_role_id = $this->groupRoleSynchronizer->getGroupRoleId($group_type_id, $role);
-        $outsider_roles[] = $this->entityTypeManager
-          ->getStorage('group_role')
+        $outsider_roles[] = $this->role_storage
           ->load($advanced_outsider_role_id);
       }
       $outsider_roles[$group_type->getOutsiderRoleId()] = $group_type->getOutsiderRole();
@@ -329,17 +329,27 @@ class GroupPermissionsManager {
    *   An array of group roles.
    */
   public function getMemberRolesByGroup(GroupInterface $group) {
-    $group_type_id = $group->getGroupType()->id();
-    $properties = [
-      'group_type' => $group_type_id,
-      'permissions_ui' => TRUE,
-    ];
+    $group_id = $group->id();
+    $cid = "group_member_roles:$group_id";
+    $data_cached = $this->cacheBackend->get($cid);
+    if (!$data_cached) {
+      $group_type_id = $group->bundle();
+      $properties = [
+        'group_type' => $group_type_id,
+        'permissions_ui' => TRUE,
+      ];
 
-    $roles = $this->entityTypeManager
-      ->getStorage('group_role')
-      ->loadByProperties($properties);
+      $roles = $this->role_storage
+        ->loadByProperties($properties);
 
-    uasort($roles, '\Drupal\group\Entity\GroupRole::sort');
+      uasort($roles, '\Drupal\group\Entity\GroupRole::sort');
+
+      $this->cacheBackend->set($cid, $roles, CacheBackendInterface::CACHE_PERMANENT);
+    }
+    else {
+      $roles = $data_cached->data;
+    }
+
     return $roles;
   }
 
