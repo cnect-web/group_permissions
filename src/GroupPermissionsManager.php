@@ -123,9 +123,6 @@ class GroupPermissionsManager {
         $this->customPermissions[$group_id] = $data_cached->data;
       }
     }
-    else {
-      $this->customPermissions[$group_id] = [];
-    }
 
     return $this->customPermissions[$group_id];
   }
