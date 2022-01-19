@@ -4,6 +4,7 @@ namespace Drupal\group_permissions;
 
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Session\AccountInterface;
+use Drupal\group\Entity\GroupInterface;
 use Drupal\group\GroupMembershipLoaderInterface;
 use Drupal\node\NodeInterface;
 
@@ -62,7 +63,7 @@ class GroupPermissionsNodeAccessRecordsBuilder implements GroupPermissionsNodeAc
   public function buildAccessRecords(NodeInterface $node) {
     $records = [];
 
-    // Load all of the group content for this node.
+    // Load all group content for this node.
     $group_contents = $this->group_content_storage->loadByEntity($node);
 
     // Only act if there are group content entities for this node.
