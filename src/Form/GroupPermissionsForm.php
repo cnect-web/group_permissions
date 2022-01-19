@@ -187,7 +187,6 @@ class GroupPermissionsForm extends BasePermissionForm {
       ];
 
       foreach ($sections as $section => $permissions) {
-
         // Create a clean section ID.
         $section_id = $provider . '-' . preg_replace('/[^a-z0-9_]+/', '_', strtolower($section));
 
@@ -205,10 +204,6 @@ class GroupPermissionsForm extends BasePermissionForm {
 
         // Then list all of the permissions for that provider and section.
         foreach ($permissions as $perm => $perm_item) {
-          if (strpos($perm_item['title']->render(), 'Relation: ') !== FALSE) {
-            continue;
-          }
-
           // Create a row for the permission, starting with the description cell.
           $form['permissions'][$perm]['description'] = [
             '#type' => 'inline_template',
