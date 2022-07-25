@@ -72,15 +72,7 @@ class GroupPermissionsNodeAccessRecordsBuilder implements GroupPermissionsNodeAc
     }
 
     foreach ($group_contents as $group_content) {
-      $group = $group_content->getGroup();
-      $group_id = $group->id();
-      if (isset($this->group_records[$group_id])) {
-        $group_records = $this->group_records[$group_id];
-      }
-      else {
-        $group_records = $this->getGroupRecords($group, $node);
-        $this->group_records[$group_id] = $group_records;
-      }
+      $group_records = $this->getGroupRecords($group_content->getGroup(), $node);
       $records = array_merge($records, $group_records);
     }
 
@@ -99,9 +91,9 @@ class GroupPermissionsNodeAccessRecordsBuilder implements GroupPermissionsNodeAc
    */
   public function getGroupRecords(GroupInterface $group, NodeInterface $node) {
     $records = [];
-     if (empty($this->groupPermissionsManager->getCustomPermissions($group))) {
-       return $records;
-     }
+    if (empty($this->groupPermissionsManager->getCustomPermissions($group))) {
+      return $records;
+    }
 
     $group_id = $group->id();
 
@@ -192,7 +184,6 @@ class GroupPermissionsNodeAccessRecordsBuilder implements GroupPermissionsNodeAc
       }
     }
     $records[] = $anonymous_record;
-
     return $records;
   }
 

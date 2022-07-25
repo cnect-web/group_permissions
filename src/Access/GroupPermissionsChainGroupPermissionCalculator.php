@@ -74,7 +74,8 @@ class GroupPermissionsChainGroupPermissionCalculator extends ChainGroupPermissio
     else {
       $calculated_permissions = new GroupPermissionsRefinableCalculatedGroupPermissions();
       foreach ($this->getCalculators() as $calculator) {
-        $calculated_permissions = $calculated_permissions->merge(call_user_func_array([$calculator, $method], $args), TRUE);
+        $overwrite = $calculator instanceof GroupPermissionCalculator ? TRUE : FALSE;
+        $calculated_permissions = $calculated_permissions->merge(call_user_func_array([$calculator, $method], $args), $overwrite);
       }
 
       // Apply a cache tag to easily flush the calculated group permissions.
