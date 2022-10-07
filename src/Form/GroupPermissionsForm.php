@@ -198,11 +198,11 @@ class GroupPermissionsForm extends BasePermissionForm {
               'class' => ['section'],
               'id' => "section-$section_id",
             ],
-            '#markup' => $section,
+            '#markup' => reset($permissions)['section'],
           ],
         ];
 
-        // Then list all of the permissions for that provider and section.
+        // Then list all permissions for that provider and section.
         foreach ($permissions as $perm => $perm_item) {
           // Create a row for the permission, starting with the description cell.
           $form['permissions'][$perm]['description'] = [
