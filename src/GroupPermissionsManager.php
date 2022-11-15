@@ -109,15 +109,18 @@ class GroupPermissionsManager {
       if (!$data_cached) {
         /** @var \Drupal\group_permissions\Entity\GroupPermission $group_permission */
         $group_permission = GroupPermission::loadByGroup($group);
+        $tags = [];
         if ($group_permission) {
           $this->groupPermissions[$group_id] = $group_permission;
-          $tags = [];
-          $tags[] = "group:$group_id";
           $tags[] = "group_permission:{$group_permission->id()}";
           $this->customPermissions[$group_id] = $group_permission->getPermissions();
           // Store the tree into the cache.
-          $this->cacheBackend->set($cid, $this->customPermissions[$group_id], CacheBackendInterface::CACHE_PERMANENT, $tags);
         }
+        else {
+          $this->customPermissions[$group_id] = [];
+        }
+
+        $this->cacheBackend->set($cid, $this->customPermissions[$group_id], CacheBackendInterface::CACHE_PERMANENT, $tags);
       }
       else {
         $this->customPermissions[$group_id] = $data_cached->data;
