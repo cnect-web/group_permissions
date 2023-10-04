@@ -33,6 +33,7 @@ class UniqueReferenceFieldValidator extends ConstraintValidator {
     }
 
     $value_taken = (bool) $query
+      ->accessCheck(FALSE)
       ->condition($field_name, $item->target_id)
       ->range(0, 1)
       ->count()
